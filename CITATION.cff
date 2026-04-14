@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software in your research or work, please cite it as below."
+type: software
+title: "DIAGaussSeidel: A DIA-format Gauss-Seidel Smoother Plugin for OpenFOAM"
+abstract: >
+  A drop-in replacement smoother for OpenFOAM Foundation v13 that implements
+  Gauss-Seidel iteration over matrices stored in Diagonal (DIA) sparse format.
+  Designed for structured hexahedral meshes, it offers improved memory access
+  locality and reduced DRAM bandwidth consumption compared to the default
+  indirect LDU-format smoother. Supports symmetric, uniform-coefficient
+  structured matrices and is selectable at runtime via fvSolution.
+authors:
+  - family-names: "Yadav"
+    given-names: "Amartya"
+    orcid: "0009-0006-2372-8127"         
+    email: "amartya@amartyadav.com"
+version: "1.0.0"
+date-released: "2026"
+license: MIT
+repository-code: "https://github.com/amartyadav/DIAGaussSeidel-Smoother-OpenFOAM"
+keywords:
+  - OpenFOAM
+  - Gauss-Seidel
+  - sparse matrix
+  - DIA format
+  - structured mesh
+  - CFD
+  - numerical methods
+  - HPC
+  - smoother
+  - linear solver
