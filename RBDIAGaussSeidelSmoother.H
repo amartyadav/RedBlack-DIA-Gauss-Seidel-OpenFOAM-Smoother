@@ -1,17 +1,17 @@
 /*---------------------------------------------------------------------------*\
 Class
-    Foam::DIAGaussSeidelSmoother
+    Foam::RBDIAGaussSeidelSmoother
 
 Description
     A lduMatrix::smoother for Gauss-Seidel, but works using the DIA
     addressing scheme, instead of the default LDU addressing scheme
 
 SourceFiles
-    DIAGaussSeidelSmoother.C
+    RBDIAGaussSeidelSmoother.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef DIAGaussSeidelSmoother_H
-#define DIAGaussSeidelSmoother_H
+#ifndef RBDIAGaussSeidelSmoother_H
+#define RBDIAGaussSeidelSmoother_H
 
 #include "doubleScalar.H"
 #include "lduMatrix.H"
@@ -20,10 +20,10 @@ SourceFiles
 namespace Foam
 {
     /*---------------------------------------------------------------------------*\
-                         Class DIAGaussSeidelSmoother Declaration
+                         Class RBDIAGaussSeidelSmoother Declaration
     \*---------------------------------------------------------------------------*/
 
-class DIAGaussSeidelSmoother:
+class RBDIAGaussSeidelSmoother:
     public lduMatrix::smoother
     {
         private:
@@ -42,12 +42,12 @@ class DIAGaussSeidelSmoother:
             scalarField upperCoeffFieldJ_;
             scalarField upperCoeffFieldK_;
         public:
-            TypeName("DIAGaussSeidel");
+            TypeName("RBDIAGaussSeidel");
 
             // Constructors
 
                 //- Construct from components
-                DIAGaussSeidelSmoother
+                RBDIAGaussSeidelSmoother
                 (
                     const word& fieldName,
                     const lduMatrix& matrix,

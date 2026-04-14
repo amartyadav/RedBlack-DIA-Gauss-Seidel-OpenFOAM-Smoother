@@ -23,34 +23,33 @@ static void likwid_close_wrapper()
 }
 #endif
 
-#include "DIAGaussSeidelSmoother.H"
-#include "Field.H"
-#include "FieldField.H"
+#include "RBDIAGaussSeidelSmoother.H"
 #include "className.H"
 #include "label.H"
 #include "lduInterfaceFieldPtrsList.H"
 #include "lduMatrix.H"
+#include "scalar.H"
+#include "scalarField.H"
 #include <set>
 #include <vector>
 #include "GaussSeidelSmoother.H"
-#include "scalar.H"
-#include "scalarField.H"
+
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 namespace Foam
 {
-    defineTypeNameAndDebug(DIAGaussSeidelSmoother, 0);
+    defineTypeNameAndDebug(RBDIAGaussSeidelSmoother, 0);
 
-    lduMatrix::smoother::addsymMatrixConstructorToTable<DIAGaussSeidelSmoother>
-        addDIAGaussSeidelSmootherSymMatrixConstructorToTable_;
+    lduMatrix::smoother::addsymMatrixConstructorToTable<RBDIAGaussSeidelSmoother>
+        addRBDIAGaussSeidelSmootherSymMatrixConstructorToTable_;
 
-    lduMatrix::smoother::addasymMatrixConstructorToTable<DIAGaussSeidelSmoother>
-        addDIAGaussSeidelSmootherAsymConstructorToTable_;
+    lduMatrix::smoother::addasymMatrixConstructorToTable<RBDIAGaussSeidelSmoother>
+        addRBDIAGaussSeidelSmootherAsymConstructorToTable_;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::DIAGaussSeidelSmoother::DIAGaussSeidelSmoother(
+Foam::RBDIAGaussSeidelSmoother::RBDIAGaussSeidelSmoother(
     const word &fieldName,
     const lduMatrix &matrix,
     const FieldField<Field, scalar> &interfaceBouCoeffs,
@@ -224,7 +223,7 @@ Foam::DIAGaussSeidelSmoother::DIAGaussSeidelSmoother(
     {
         if (allUniform)
         {
-            Info<< "DIAGaussSeidel: fast path enabled (uniform coefficients),  Nx=" << Nx_
+            Info<< "RBDIAGaussSeidel: fast path enabled (uniform coefficients),  Nx=" << Nx_
                 << " Ny=" << Ny_ << " Nz=" << Nz_
                 << " upperCoeffs=(" << upperCoeffI_
                 << ", " << upperCoeffJ_
@@ -233,7 +232,7 @@ Foam::DIAGaussSeidelSmoother::DIAGaussSeidelSmoother(
         }
         else
         {
-            Info<< "DIAGaussSeidel: fast path enabled (variable coefficients),  Nx=" << Nx_
+            Info<< "RBDIAGaussSeidel: fast path enabled (variable coefficients),  Nx=" << Nx_
                 << " Ny=" << Ny_ << " Nz=" << Nz_
                 << " upperCoeffs=(" << upperCoeffI_
                 << ", " << upperCoeffJ_
@@ -273,12 +272,12 @@ Foam::DIAGaussSeidelSmoother::DIAGaussSeidelSmoother(
     }
     else if (!structuredMesh_)
     {
-        Info<< "DIAGaussSeidel: mesh not structured, falling back (nCells="
+        Info<< "RBDIAGaussSeidel: mesh not structured, falling back (nCells="
             << nCells << ")" << endl;
     }
     else if (matrix_.asymmetric())
     {
-        Info<< "DIAGaussSeidel: asymmetric matrix, falling back" << endl;
+        Info<< "RBDIAGaussSeidel: asymmetric matrix, falling back" << endl;
     }
 
     if (useDIA_ && nCells == 125000)  // only log on finest level of your test case
@@ -305,7 +304,7 @@ Foam::DIAGaussSeidelSmoother::DIAGaussSeidelSmoother(
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 // Define the virtual smooth method (the 4-arg const one). Its body should just call Foam::GaussSeidelSmoother::smooth(...) — the stock one — passing fieldName_, psi, matrix_, source, interfaceBouCoeffs_, interfaces_, cmpt, nSweeps. All the underscore-suffixed members are inherited from the protected base class.
-void Foam::DIAGaussSeidelSmoother::smooth(
+void Foam::RBDIAGaussSeidelSmoother::smooth(
     scalarField& psi,
     const scalarField& source,
     const direction cmpt,
@@ -364,7 +363,7 @@ void Foam::DIAGaussSeidelSmoother::smooth(
             }
 
         // ---- Sweep loop ----
-		LIKWID_MARKER_START("DIA_sweep");
+		LIKWID_MARKER_START("RBDIA_sweep");
         for (label sweep = 0; sweep < nSweeps; sweep++)
         {
             bPrime = source;
@@ -423,7 +422,7 @@ void Foam::DIAGaussSeidelSmoother::smooth(
                 psiPtr[idx] = psii;
             }
         }
-        LIKWID_MARKER_STOP("DIA_sweep");
+        LIKWID_MARKER_STOP("RBDIA_sweep");
 
         // ---- Restore interface coefficients ----
         forAll(mBouCoeffs, patchi)
