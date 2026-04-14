@@ -28,5 +28,5 @@ conference papers, or publications, the author requests (but does not
 legally require beyond the copyright notice above) that you cite it using
 the metadata provided in CITATION.cff, or in the following form:
 
-  Amartya Yadav. DIAGaussSeidel: A DIA-format Gauss-Seidel Smoother
-  Plugin for OpenFOAM. 2026. https://github.com/amartyadav/DIAGaussSeidel-Smoother-OpenFOAM
+  Amartya Yadav. DIAGaussSeidel: A Red-Black Parallel DIA-format Gauss-Seidel Smoother
+  Plugin for OpenFOAM. 2026. https://github.com/amartyadav/RedBlack-DIA-Gauss-Seidel-OpenFOAM-Smoother
