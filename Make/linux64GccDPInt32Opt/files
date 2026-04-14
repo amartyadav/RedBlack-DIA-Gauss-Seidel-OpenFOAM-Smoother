@@ -1,2 +1,2 @@
-SOURCE += DIAGaussSeidelSmoother.C
-LIB = $(FOAM_USER_LIBBIN)/libDIAGaussSeidelSmoother
+SOURCE += RBDIAGaussSeidelSmoother.C
+LIB = $(FOAM_USER_LIBBIN)/libRBDIAGaussSeidelSmoother
