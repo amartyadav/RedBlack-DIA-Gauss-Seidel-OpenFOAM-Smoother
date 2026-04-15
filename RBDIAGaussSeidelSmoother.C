@@ -382,44 +382,88 @@ void Foam::RBDIAGaussSeidelSmoother::smooth(
                         bPrime,
                         cmpt);
 
-
-            // The actual DIA sweep
-            for (label idx = 0; idx < nCells; idx++)
+            // red cells sweep
+            for(label idx = 0; idx < nCells; idx++)
             {
                 label j = idx % Nx;
                 label i = (idx / Nx) % Ny;
                 label k = idx / kStride;
 
+                if((i + j + k) % 2 != 0) continue; // skip half the cells
                 scalar psii = bPrimePtr[idx];
 
-                // Upper triangle pull (read forward neighbours)
-                // Only if the forward neighbour exists (not at boundary):
-                if (j < Nx - 1) {
+                // forward neighbours (coefficient is at upperXPtr[idx])
+                if(j < Nx - 1)
+                {
                     psii -= upperIPtr[idx] * psiPtr[idx + 1];
+
                 }
-                if (i < Ny - 1) {
+                if(i < Ny - 1)
+                {
                     psii -= upperJPtr[idx] * psiPtr[idx + jStride];
                 }
-                if (k < Nz - 1) {
+                if(k < Nz - 1)
+                {
                     psii -= upperKPtr[idx] * psiPtr[idx + kStride];
                 }
 
-                // Divide by diagonal
-                psii /= diagPtr[idx];
+                // backward neighbours (coefficient is at upperXPtr[idx - 1])
+                if(j > 0)
+                {
+                    psii -= upperIPtr[idx - 1] * psiPtr[idx - 1];
+                }
+                if(i > 0)
+                {
+                    psii -= upperJPtr[idx - jStride] * psiPtr[idx - jStride];
+                }
+                if(k > 0)
+                {
+                    psii -= upperKPtr[idx - kStride] * psiPtr[idx - kStride];
+                }
 
-                // Lower triangle push (update forward neighbours' bPrime)
-                // Same conditionals:
-                if (j < Nx - 1) {
-                    bPrimePtr[idx + 1] -= lowerIPtr[idx] * psii;
+                psiPtr[idx] = psii / diagPtr[idx];
+
+            }
+            // black cells sweep
+            for(label idx = 0; idx < nCells; idx++)
+            {
+                label j = idx % Nx;
+                label i = (idx / Nx) % Ny;
+                label k = idx / kStride;
+
+                if((i + j + k) % 2 != 1) continue;
+                scalar psii = bPrimePtr[idx];
+
+                // forward neighbours (coefficient is at upperXPtr[idx])
+                if(j < Nx - 1)
+                {
+                    psii -= upperIPtr[idx] * psiPtr[idx + 1];
                 }
-                if (i < Ny - 1) {
-                    bPrimePtr[idx + jStride] -= lowerJPtr[idx] * psii;
+                if(i < Ny - 1)
+                {
+                    psii -= upperJPtr[idx] * psiPtr[idx + jStride];
                 }
-                if (k < Nz - 1) {
-                    bPrimePtr[idx + kStride] -= lowerKPtr[idx] * psii;
+                if(k < Nz - 1)
+                {
+                    psii -= upperKPtr[idx] * psiPtr[idx + kStride];
                 }
 
-                psiPtr[idx] = psii;
+                // backward neighbours (coefficient is at upperXPtr[idx - 1])
+                if(j > 0)
+                {
+                    psii -= upperIPtr[idx - 1] * psiPtr[idx - 1];
+                }
+                if(i > 0)
+                {
+                    psii -= upperJPtr[idx - jStride] * psiPtr[idx - jStride];
+                }
+                if(k > 0)
+                {
+                    psii -= upperKPtr[idx - kStride] * psiPtr[idx - kStride];
+                }
+
+                psiPtr[idx] = psii / diagPtr[idx];
+
             }
         }
         LIKWID_MARKER_STOP("RBDIA_sweep");
