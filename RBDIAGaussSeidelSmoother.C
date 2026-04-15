@@ -33,7 +33,7 @@ static void likwid_close_wrapper()
 #include <set>
 #include <vector>
 #include "GaussSeidelSmoother.H"
-
+#include <chrono>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 namespace Foam
@@ -363,6 +363,9 @@ void Foam::RBDIAGaussSeidelSmoother::smooth(
             }
 
         // ---- Sweep loop ----
+        static double totalSweepTime = 0.0;
+        static label totalCalls = 0;
+        auto t0 = std::chrono::high_resolution_clock::now();
 		LIKWID_MARKER_START("RBDIA_sweep");
         for (label sweep = 0; sweep < nSweeps; sweep++)
         {
@@ -383,6 +386,7 @@ void Foam::RBDIAGaussSeidelSmoother::smooth(
                         cmpt);
 
             // red cells sweep
+            #pragma omp parallel for
             for(label idx = 0; idx < nCells; idx++)
             {
                 label j = idx % Nx;
@@ -425,6 +429,7 @@ void Foam::RBDIAGaussSeidelSmoother::smooth(
 
             }
             // black cells sweep
+            #pragma omp parallel for
             for(label idx = 0; idx < nCells; idx++)
             {
                 label j = idx % Nx;
@@ -467,6 +472,15 @@ void Foam::RBDIAGaussSeidelSmoother::smooth(
             }
         }
         LIKWID_MARKER_STOP("RBDIA_sweep");
+        auto t1 = std::chrono::high_resolution_clock::now();
+        totalSweepTime += std::chrono::duration<double>(t1 - t0).count();
+        totalCalls++;
+
+        if (totalCalls % 1000 == 0)
+        {
+            Info<< "RBDIA_sweep: totalTime=" << totalSweepTime
+                << "s calls=" << totalCalls << endl;
+        }
 
         // ---- Restore interface coefficients ----
         forAll(mBouCoeffs, patchi)
