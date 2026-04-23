@@ -1,8 +1,10 @@
-# DIAGaussSeidel
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.19706030.svg)](https://doi.org/10.5281/zenodo.19706030)
 
-A drop-in Gauss-Seidel smoother plugin for **OpenFOAM Foundation v13** that operates
+# RBDIAGaussSeidel
+
+A drop-in Red-Black Gauss-Seidel smoother plugin for **OpenFOAM Foundation v13** that operates
 on matrices stored in **Diagonal (DIA) sparse format**, targeting structured hexahedral
-meshes for improved memory access performance.
+meshes for improved memory access performance and data-race-free parallelism.
 
 Selectable at runtime via `fvSolution` — no source modification required.
 
@@ -11,7 +13,7 @@ solver          p
 {
     solver          PCG;
     preconditioner  DIC;
-    smoother        DIAGaussSeidel;   // <-- drop this in
+    smoother        RBDIAGaussSeidel;   // <-- drop this in
     ...
 }
 ```
@@ -26,14 +28,18 @@ multiply. On structured hexahedral meshes, the non-zero sparsity pattern is fixe
 predictable — the DIA format exploits this by encoding off-diagonal bands as contiguous
 arrays, eliminating indirection and dramatically improving cache line utilisation.
 
-This plugin replaces the LDU smoother with a DIA-format implementation for the specific
-case where the mesh topology permits it. The result is fewer DRAM transactions, lower
-instruction counts, and measurable wall-clock improvements on modern out-of-order CPUs.
+Red-Black ordering partitions the mesh cells into two independent sets — **red** cells
+and **black** cells — such that no cell in one set has a neighbour in the same set.
+This means all red cells can be updated simultaneously without data races, followed by
+all black cells. The result is a smoother that is both cache-friendly and safe for
+shared-memory parallelism (OpenMP), without sacrificing convergence behaviour relative
+to the standard lexicographic Gauss-Seidel.
 
 **Key characteristics of the target problem:**
 - Structured hex meshes (e.g. cavity, duct, channel flow)
-- Symmetric matrices ~~with uniform coefficients per diagonal band~~ (now supports uniform or variable coefficients per diagonal band - should cover more use cases now)
+- Symmetric matrices with uniform or variable coefficients per diagonal band
 - Fixed diagonal offsets: `{±1, ±N, ±N²}` for a mesh of stride `N`
+- Red-Black cell ordering derived from mesh index parity
 
 ---
 
@@ -43,15 +49,29 @@ This plugin is intentionally scoped. It is **not** a general-purpose smoother.
 
 - ✅ Structured hexahedral meshes
 - ✅ Symmetric matrices
-- ✅ ~~Uniform coefficients per diagonal band~~ Now supports both uniform and variable coefficients
+- ✅ Uniform and variable coefficients per diagonal band
+- ✅ Data-race-free parallel sweep (OpenMP-ready)
 - ✅ OpenFOAM Foundation v13
 - ❌ Unstructured or polyhedral meshes (falls back gracefully — see below)
-- ❌ ~~Non-uniform or anisotropic coefficient distributions~~
 - ❌ ESI/OpenCFD (foam-extend) variants — untested
 
 The plugin includes a structured-mesh detection check at initialisation. If the mesh
 does not satisfy the DIA assumptions, it will either warn and fall back or abort
 cleanly, depending on configuration.
+
+---
+
+## Relation to DIAGaussSeidel
+
+This plugin is the Red-Black extension of
+[DIAGaussSeidel](https://github.com/amartyadav/DIAGaussSeidel-Smoother-OpenFOAM)
+(DOI: [10.5281/zenodo.19706068](https://doi.org/10.5281/zenodo.19706068)).
+
+Both share the same DIA matrix format and structured-mesh assumptions. The difference
+is the sweep order: `DIAGaussSeidel` uses standard lexicographic ordering (sequential,
+cache-efficient); `RBDIAGaussSeidel` uses Red-Black ordering (parallel-safe, identical
+convergence on symmetric problems). For single-threaded use the two are comparable;
+Red-Black becomes advantageous when OpenMP threading is enabled.
 
 ---
 
@@ -64,7 +84,7 @@ source /opt/openfoam13/etc/bashrc   # or your OF installation path
 wmake libso
 ```
 
-This produces `libDIAGaussSeidel.so` in `$FOAM_USER_LIBBIN`.
+This produces `libRBDIAGaussSeidel.so` in `$FOAM_USER_LIBBIN`.
 
 ---
 
@@ -75,7 +95,7 @@ This produces `libDIAGaussSeidel.so` in `$FOAM_USER_LIBBIN`.
 ```cpp
 libs
 (
-    "libDIAGaussSeidel.so"
+    "libRBDIAGaussSeidel.so"
 );
 ```
 
@@ -88,14 +108,14 @@ solvers
     {
         solver          PCG;
         preconditioner  DIC;
-        smoother        DIAGaussSeidel;
+        smoother        RBDIAGaussSeidel;
         tolerance       1e-6;
         relTol          0.1;
     }
 }
 ```
 
-The smoother name `DIAGaussSeidel` is registered in OpenFOAM's runtime selection
+The smoother name `RBDIAGaussSeidel` is registered in OpenFOAM's runtime selection
 table and will be picked up automatically.
 
 ---
@@ -103,14 +123,14 @@ table and will be picked up automatically.
 ## Repository Structure
 
 ```
-DIAGaussSeidel/
+RBDIAGaussSeidel/
 ├── Make/
 │   ├── files
 │   └── options
 ├── include/
-│   └── DIAGaussSeidelSmoother.H
+│   └── RBDIAGaussSeidelSmoother.H
 ├── src/
-│   └── DIAGaussSeidelSmoother.C
+│   └── RBDIAGaussSeidelSmoother.C
 ├── CITATION.cff
 ├── LICENSE
 └── README.md
@@ -125,17 +145,17 @@ please cite it. GitHub will surface a **Cite this repository** button using the
 included `CITATION.cff`, or you can cite manually:
 
 ```
-Amartya Yadav. DIAGaussSeidel: A DIA-format Gauss-Seidel Smoother Plugin
-for OpenFOAM. 2026. https://github.com/amartyadav/DIAGaussSeidel-Smoother-OpenFOAM
+Amartya Yadav. RBDIAGaussSeidel: A Red-Black DIA-format Gauss-Seidel Smoother Plugin
+for OpenFOAM. 2026. https://github.com/amartyadav/RBDIAGaussSeidel-Smoother-OpenFOAM
 ```
 
 BibTeX:
 ```bibtex
-@software{yadav2026diagaussseidel,
+@software{yadav2026rbdiagaussseidel,
   author  = {Yadav, Amartya},
-  title   = {{DIAGaussSeidel}: A {DIA}-format {Gauss-Seidel} Smoother Plugin for {OpenFOAM}},
+  title   = {{RBDIAGaussSeidel}: A Red-Black {DIA}-format {Gauss-Seidel} Smoother Plugin for {OpenFOAM}},
   year    = {2026},
-  url     = {https://github.com/amartyadav/DIAGaussSeidel-Smoother-OpenFOAM},
+  url     = {https://github.com/amartyadav/RBDIAGaussSeidel-Smoother-OpenFOAM},
   license = {MIT}
 }
 ```
@@ -155,7 +175,7 @@ substantial portions of the software. See [LICENSE](LICENSE) for full terms.
 ## Author
 
 **Amartya Yadav**  
-HPC Software Engineer, Calligo Technologies <br/>
+HPC Software Engineer, Calligo Technologies  
 MSc High Performance Computing, EPCC, University of Edinburgh  
-[github.com/\amartyadav](https://github.com/amartyadav) <br/>
-[amartyadav.com/](https://amartyadav.com)
+[github.com/amartyadav](https://github.com/amartyadav)  
+[amartyadav.com](https://amartyadav.com)
